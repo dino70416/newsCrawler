@@ -17,7 +17,13 @@
   },
   "homepage": "https://github.com/dino70416/newsCrawler#readme",
   "dependencies": {
-    "puppeteer": "^1.16.0"
+    "cheerio": "^1.0.0-rc.3",
+    "fs": "0.0.1-security",
+    "mongodb": "^3.2.5",
+    "mongoose": "^5.5.10",
+    "nodejieba": "^2.3.1",
+    "puppeteer": "^1.16.0",
+    "request": "^2.88.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
