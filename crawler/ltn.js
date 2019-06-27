@@ -14,7 +14,7 @@ const newsTypes = {
 };
 
 (async () => {
-  const pathToExtension = require('path').join(__dirname, 'ublock', '1.17.4_0')
+  const pathToExtension = PATH.join(__dirname, 'ublock', '1.17.4_0')
   const browser = await puppeteer.launch({
     headless: false,
     args: [

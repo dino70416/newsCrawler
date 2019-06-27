@@ -12,7 +12,7 @@
 const PATH = require('path')
 const MongoClient = require('mongodb').MongoClient
 
-const CONFIG = require(PATH.join(process.cwd(), 'config', 'config.js'))
+const CONFIG = require(PATH.join(__dirname, 'config', 'config.js'))
 const DATABASE = CONFIG.mongodbConfig
 
 const ifExistDocuments = (targetDb, targetCollection, query, callback) => {

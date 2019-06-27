@@ -1,20 +1,17 @@
 const puppeteer = require('puppeteer')
-// const request = require('request')
-// const cheerio = require('cheerio')
 const PATH = require('path')
-const db = require(PATH.join(process.cwd(), 'db.js'))
-// const fs = require('fs')
+const db = require(PATH.join(process.cwd(), '../', 'db.js'))
 
-const newsTypes = {
-  // 'politics': 'https://tw.news.appledaily.com/politics/realtime',
-  'social': 'https://tw.news.appledaily.com/local/realtime',
-  'international': 'https://tw.news.appledaily.com/international/realtime',
-  'entertainment': 'https://tw.entertainment.appledaily.com/realtime',
-  'life': 'https://tw.news.appledaily.com/life/realtime',
-  '3C': 'https://tw.lifestyle.appledaily.com/gadget/realtime',
-  'finance': 'https://tw.finance.appledaily.com/realtime/',
-  'sports': 'https://tw.sports.appledaily.com/realtime'
-}
+const newsTypes = new Map([
+  ['politics', 'https://tw.news.appledaily.com/politics/realtime'],
+  ['social', 'https://tw.news.appledaily.com/local/realtime'],
+  ['international', 'https://tw.news.appledaily.com/international/realtime'],
+  ['entertainment', 'https://tw.entertainment.appledaily.com/realtime'],
+  ['life', 'https://tw.news.appledaily.com/life/realtime'],
+  ['3C', 'https://tw.lifestyle.appledaily.com/gadget/realtime'],
+  ['finance', 'https://tw.finance.appledaily.com/realtime'],
+  ['sports', 'https://tw.sports.appledaily.com/realtime']
+])
 
 const login = async (browser) => {
   const page = await browser.newPage()
@@ -34,7 +31,7 @@ const login = async (browser) => {
 };
 
 (async () => {
-  const pathToExtension = require('path').join(__dirname, 'ublock', '1.17.4_0')
+  const pathToExtension = PATH.join(__dirname, '../', 'ublock', '1.17.4_0')
   const browser = await puppeteer.launch({
     headless: false,
     args: [
@@ -42,11 +39,11 @@ const login = async (browser) => {
       `--load-extension=${pathToExtension}`
     ]
   })
-  // await login(browser)
+  await login(browser)
   const page = await browser.newPage()
-  for (const newstype of Object.keys(newsTypes)) {
+  for (const type of newsTypes.keys()) {
     let linkArray = []
-    const link = newsTypes[newstype]
+    const link = newsTypes.get(type)
     await page.goto(link)
     await page.waitFor('.page_switch a')
     const pageLink = await page.evaluate(
@@ -63,40 +60,58 @@ const login = async (browser) => {
     } else {
       pageLink.push(last)
     }
+    let pageIndex = 1
     for (const pagelink of pageLink) {
       await page.goto(pagelink)
       await page.waitFor('.rtddt a')
       const pLink = await page.evaluate(
         () => [...document.querySelectorAll('.rtddt a')].map(elem => elem.href)
       )
+      console.log(type + ': page' + pageIndex)
+      pageIndex++
       linkArray = linkArray.concat(pLink)
     }
-    // fs.writeFile('link.txt', linkArray)
-    for (const linkarray of linkArray) {
-      await page.goto(linkarray)
+    let index = 0
+    let loginCount = 20
+    for (let i = 430; i < linkArray.length; i++, loginCount--) {
+      index = i
+      await page.goto(linkArray[index])
       let title = await page.evaluate(
         () => document.querySelector('h1').textContent
       )
       let isLogin = await page.evaluate(
         () => document.getCookie('isLoggedIn')
       )
-      if (isLogin === 'false') {
-        await login(browser)
-        await page.reload()
-        await page.waitFor(5000)
+      if (loginCount < 0) {
+        if (isLogin === 'false') {
+          console.log('Be Logged Out!!!!!!!')
+          await page.goto('https://tw.appledaily.com/new/realtime')
+          await page.click('#login-button a')
+          try {
+            await page.waitFor('#login-form')
+            await page.type('#email', 'aa123000@ymail.com')
+            await page.type('#password', '5pB-kyJt!6bZZwN')
+            await page.$eval('#login-form', form => form.submit())
+            await page.waitForNavigation()
+            i -= 5
+            loginCount = 20
+            continue
+          } catch (err) {
+            throw err
+          }
+        }
       }
-      // page.waitFor('.ndArticle_margin')
       let content = await page.evaluate(
         () => [...document.querySelectorAll('.ndArticle_margin > p')].map(elem => elem.textContent).join()
       )
-      const obj = [{
-        'type': newstype,
-        'url': linkarray,
+      const obj = { $set: {
+        'type': type,
+        'url': linkArray[index],
         'title': title,
         'content': content
-      }]
-      await db.create('news', obj, (result) => {
-        console.log('insert success')
+      } }
+      db.updateUpserted('news', { 'url': linkArray[index] }, obj, result => {
+        console.log(`${index} insert success`)
       })
     }
   }

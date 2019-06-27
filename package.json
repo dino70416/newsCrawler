@@ -23,6 +23,7 @@
     "mongoose": "^5.5.10",
     "nodejieba": "^2.3.1",
     "puppeteer": "^1.16.0",
+    "puppeteer-autoscroll-down": "^0.1.1",
     "request": "^2.88.0"
   },
   "devDependencies": {
